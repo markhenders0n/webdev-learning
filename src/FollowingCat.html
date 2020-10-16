@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="en-US">
+    <body>
+        <h1>Move the mouse and the cat will follow!</h1>
+
+        <div>
+            <img id="catImage" title="My name is Ollie!" src="images/CAT.jpg" alt="CAT"
+             style="position:absolute;top:300px;left:500px;width:128px;height:128px;">
+        </div>
+
+        <script type="text/javascript">
+            var catPosition;
+            catPosition = {
+                x: parseInt(document.getElementById("catImage").style.top, 10),
+                y: parseInt(document.getElementById("catImage").style.left, 10)
+            };
+
+            document.onmousemove = function(e){
+                var event = e || window.event;
+                window.mouseX = event.clientX;
+                window.mouseY = event.clientY;
+            }
+
+            function moveImage(){
+                var dX, dY;
+                dX = window.mouseX-catPosition.x;
+                dY = window.mouseY-catPosition.y;
+
+                document.getElementById("catImage").style.left=catPosition.x+dX-128/2+"px";
+                document.getElementById("catImage").style.top=catPosition.y+dY-128/2+"px";
+                catPosition = {
+                    x: parseInt(document.getElementById("catImage").style.top, 10),
+                    y: parseInt(document.getElementById("catImage").style.left, 10)
+                };
+            }
+
+            window.onload = function(){
+                setInterval(moveImage, 100);
+            }
+        </script>
+    </body>
+</html>
