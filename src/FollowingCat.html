@@ -10,28 +10,35 @@
 
         <script type="text/javascript">
             var catPosition;
-            catPosition = {
-                x: parseInt(document.getElementById("catImage").style.top, 10),
-                y: parseInt(document.getElementById("catImage").style.left, 10)
+            catPosition = {                                                                // initializes the image position
+                x: parseInt(document.getElementById("catImage").style.left, 10),
+                y: parseInt(document.getElementById("catImage").style.top, 10)
             };
 
-            document.onmousemove = function(e){
+            document.onmousemove = function(e){                                            // collects mouse position data
                 var event = e || window.event;
                 window.mouseX = event.clientX;
                 window.mouseY = event.clientY;
             }
 
             function moveImage(){
-                var dX, dY;
-                dX = window.mouseX-catPosition.x;
-                dY = window.mouseY-catPosition.y;
+                var dx, dy, th;
+                if(window.mouseX){
+                    dx = window.mouseX-(catPosition.x+64);
+                    dy = window.mouseY-(catPosition.y+64);
+                    if(Math.sqrt(dx*dx+dy*dy) > 10){                                       // limits the motion to 10px per interval
+                        th = Math.atan2(dy,dx);
+                        dx = Math.trunc(10*Math.cos(th)); 
+                        dy = Math.trunc(10*Math.sin(th));
+                    }
 
-                document.getElementById("catImage").style.left=catPosition.x+dX-128/2+"px";
-                document.getElementById("catImage").style.top=catPosition.y+dY-128/2+"px";
-                catPosition = {
-                    x: parseInt(document.getElementById("catImage").style.top, 10),
-                    y: parseInt(document.getElementById("catImage").style.left, 10)
-                };
+                    document.getElementById("catImage").style.left=catPosition.x+dx+"px";  // sets the new image position
+                    document.getElementById("catImage").style.top=catPosition.y+dy+"px";
+                    catPosition = {                                                        // converts the new position from a string
+                        x: parseInt(document.getElementById("catImage").style.left, 10),   // to a number
+                        y: parseInt(document.getElementById("catImage").style.top, 10)
+                    };
+                }  
             }
 
             window.onload = function(){
