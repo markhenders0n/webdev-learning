@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en-US">
+    <body>
+        <h1>Click where you want the cat to go!</h1>
+
+        <div>
+            <img id="catImage" title="My name is Ollie!" src="images/CAT.jpg" alt="CAT"
+             style="position:absolute;top:300px;left:500px;width:128px;height:128px;">
+        </div>
+
+        <script type="text/javascript">
+            var catPosition;
+            catPosition = {                                                                 // initializes the image position data
+                x: parseInt(document.getElementById("catImage").style.left, 10),
+                y: parseInt(document.getElementById("catImage").style.top, 10)
+            };
+
+            document.onmouseup = function(e){                                               // collects mouse position data at
+                var event = e || window.event;                                              // clicked postion (x,y)
+                window.mouseX = event.clientX;
+                window.mouseY = event.clientY;
+            }
+
+            function moveImage(goalX, goalY){
+                var dx, dy, th;
+                if(goalX){
+                    dx = goalX-(catPosition.x+64);
+                    dy = goalY-(catPosition.y+64);
+                    if(Math.sqrt(dx*dx+dy*dy) > 10){                                        // limits the motion to 10px per interval
+                        th = Math.atan2(dy,dx);
+                        dx = Math.trunc(10*Math.cos(th)); 
+                        dy = Math.trunc(10*Math.sin(th));
+                    }
+
+                    document.getElementById("catImage").style.left=catPosition.x+dx+"px";   // sets the new image position
+                    document.getElementById("catImage").style.top=catPosition.y+dy+"px";
+                    catPosition = {                                                         // converts the new position from a string
+                        x: parseInt(document.getElementById("catImage").style.left, 10),    // to a number
+                        y: parseInt(document.getElementById("catImage").style.top, 10)
+                    };
+                }
+
+                return(catPosition);  
+            }
+            
+            function RRT(){
+                var tree, pRand, pNear, pFound;
+                tree = {                                                                    // initialize path search graph
+                    X: [parseInt(document.getElementById("catImage").style.left, 10)],
+                    Y: [parseInt(document.getElementById("catImage").style.top, 10)],
+                    pID: [null]
+                };
+
+                for(var i=0; i<window.innerWidth/10; i++){
+                    pRand = {                                                               // get random pose from window
+                        x: Math.floor(window.innerWidth*Math.random()+1),
+                        y: Math.floor(window.innerHeight*Math.random()+1)
+                    };
+
+                    var dMin = 1000000000;
+                    var dCur, pID;
+                    for(var j=0; j<tree.X.length; j++){                                     // find nearest existing pose
+                        dCur = Math.sqrt((pRand.x-tree.X[j])*(pRand.x-tree.X[j])+
+                                         (pRand.y-tree.Y[j])*(pRand.y-tree.Y[j]));
+                        if(dCur < dMin){
+                            dMin = dCur;
+                            pID = j;
+                        }
+                    }
+                    pNear = {
+                        x: tree.X[pID],
+                        y: tree.Y[pID]
+                    };
+
+                    if(dMin > 10){                                                          // if the distance is too great
+                        var th = Math.atan2((pRand.y-pNear.y),(pRand.x-pNear.x));           // between nodes then limit it
+                        pRand.x = 10*Math.cos(th);
+                        pRand.y = 10*Math.sin(th);
+                    }
+
+                    tree.X.push(pRand.x);                                                   // add new pose to tree
+                    tree.Y.push(pRand.y);
+                    tree.pID.push(pID);
+
+                    if(Math.sqrt((window.mouseX-pRand.x)*(window.mouseX-pRand.x)+           // check to see if the new pose is near the goal
+                                 (window.mouseY-pRand.y)*(window.mouseY-pRand.y)) <= 5){   
+                        pFound = true;
+                        break;
+                    }
+                    else{
+                        pFound = false;
+                    }
+                }
+
+                if(pFound == true){                                                         // start moving the image along the path
+                    var goal, pID, cPose, dist;
+                    
+                    for(var i=tree.pID[tree.pID.length-1]; i!=null; i=pID){
+                        pID = tree.pID[i];
+                        goal = {
+                            x: tree.X[i],
+                            y: tree.y[i]
+                        };
+                        while(dist > 2){                                                    // move image towards sub-goal
+                            cPose = moveImage(goal.x,goal.y);
+                            dist = Math.sqrt((goal.x-cPose.x)*(goal.x-cPose.x)+
+                                             (goal.y-cPose.y)*(goal.y-cPose.y));
+                            setTimeout(100);
+                        }
+                    }
+                }
+            }
+        </script>
+    </body>
+</html>
