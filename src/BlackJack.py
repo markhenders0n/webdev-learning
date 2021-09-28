@@ -13,11 +13,7 @@ def shuffleCard(allIterator, suiteIterator, suiteName):
         cardNum = rm.randrange(1, 11-suiteIterator, 1)
     query = """
                 INSERT INTO Deck (RowID, Type, Value)
-                SELECT RowID,Type,Value FROM %s
-                WHERE RowID=%d;
-
-                UPDATE Deck
-                SET RowID=%d
+                SELECT %d,Type,Value FROM %s
                 WHERE RowID=%d;
 
                 DELETE FROM %s
@@ -26,9 +22,25 @@ def shuffleCard(allIterator, suiteIterator, suiteName):
                 UPDATE %s
                 SET RowID-=1
                 WHERE RowID>%d;
-            """ % (suiteName, cardNum, allIterator, cardNum, suiteName, cardNum, suiteName, cardNum)
+            """ % (allIterator, suiteName, cardNum, suiteName, cardNum, suiteName, cardNum)
     cursor.execute(query)
     return(allIterator)
+
+def dealCard(participant, numUsed):
+    cardNum = rm.randrange(1, 41-numUsed, 1)
+    query = """
+            INSERT INTO %s (Type, Value)
+            SELECT Type,Value FROM Deck
+            WHERE RowID=%d;
+
+            DELETE FROM Deck
+            WHERE RowID=%d;
+
+            UPDATE Deck
+            SET RowID-=1
+            WHERE RowID>%d;
+        """ % (participant, cardNum, cardNum, cardNum)
+    cursor.execute(query)
 
 # make connection to local server
 conn = pyodbc.connect('Driver={SQL Server Native Client 11.0};' 
@@ -84,29 +96,93 @@ while i < 41:
     suiteNum = rm.randrange(0, 4, 1)
     if(suiteNum == 0):
         # Shuffle card from Diamond Suite
-        i = shuffleCard(i, d, "Diamond")
+        i = shuffleCard(i, d, 'Diamond')
         d += 1
 
     elif(suiteNum == 1):
         # Shuffle card from Heart Suite
-        i = shuffleCard(i, h, "Heart")
+        i = shuffleCard(i, h, 'Heart')
         h += 1
 
     elif(suiteNum == 2):
         # Shuffle card from Club Suite
-        i = shuffleCard(i, c, "Club")
+        i = shuffleCard(i, c, 'Club')
         c += 1
 
     else:
         # Shuffle card from Spade Suite
-        i = shuffleCard(i, s, "Spade")
+        i = shuffleCard(i, s, 'Spade')
         s += 1
     
     i += 1
 
+# deal two cards to player and opponent from deck table
+numUsed = 0
+
+for i in range(1,3):
+    dealCard('Player', numUsed)
+    numUsed += 1
+
+for i in range(1,3):
+    dealCard('Opponent', numUsed)
+    numUsed += 1
+
+cursor.execute("SELECT * FROM Player;")
+playerCards = [cursor.fetchone(), cursor.fetchone()]
+print("Your cards are %d of %ss and %d of %ss" % (playerCards[0].Value, playerCards[0].Type,
+                                                playerCards[1].Value, playerCards[1].Type))
+
+cursor.execute("SELECT * FROM Opponent;")
+opponentCards = [cursor.fetchone(), cursor.fetchone()]
+print("Your opponents cards are %d of %ss and %d of %ss" % (opponentCards[0].Value, opponentCards[0].Type,
+                                                            opponentCards[1].Value, opponentCards[1].Type))
+
+# ask user if they want more cards. call draw function when answered with y. end game otherwise
+answer = "y"
+while(answer != "n"):
+    playerTotal = 0
+    opponentTotal = 0
+    answer = input("Would you like to draw another card? (y/n)")
+    if(answer is "y"):
+        dealCard('Player', numUsed)
+        numUsed += 1
+        cursor.execute("SELECT * FROM Player WHERE RowID>%d;" %(len(playerCards)))
+        playerCards.append(cursor.fetchone())
+        print("You drew a %d of %ss" % (playerCards[-1].Value, playerCards[-1].Type))
+        
+        dealCard('Opponent', numUsed)
+        numUsed += 1
+        cursor.execute("SELECT * FROM Opponent WHERE RowID>%d;" %(len(opponentCards)))
+        opponentCards.append(cursor.fetchone())
+        print("Your opponent drew a %d of %ss" % (opponentCards[-1].Value, opponentCards[-1].Type))
+
+    for i in range(len(playerCards)):
+        playerTotal += playerCards[i].Value
+    if(playerTotal > 21):
+        answer = "n"
+        print("Bust, you lose...")
+        continue
+
+    for i in range(len(opponentCards)):
+        opponentTotal += opponentCards[i].Value
+    if(opponentTotal > 21):
+        answer = "n"
+        print("Opponent bust, you win!")
+        continue
+
+# decide game's outcome and notify player
+if(playerTotal < 21 and opponentTotal < 21):
+    totalDifference = playerTotal - opponentTotal
+    if(totalDifference > 0):
+        print("You were closest to 21 so you win!")
+    elif(totalDifference < 0):
+        print("The opponent was closer to 21 so you lose...")
+    else:
+        print("It's a tie!")
+
 # clean up after game
-# cursor.execute("""
-#                     USE master;
-#                     ALTER DATABASE BlackJack SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
-#                     DROP DATABASE BlackJack;
-#                """) # delete database after game
+cursor.execute("""
+                    USE master;
+                    ALTER DATABASE BlackJack SET SINGLE_USER WITH ROLLBACK IMMEDIATE;
+                    DROP DATABASE BlackJack;
+               """) # delete database after game
